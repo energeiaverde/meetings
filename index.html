@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Google Calendar Schedule</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 2em auto; }
+    h1 { text-align: center; }
+    ul { list-style: none; padding: 0; }
+    li { margin-bottom: 1em; border-bottom: 1px solid #ccc; padding-bottom: 0.5em; }
+    .event-title { font-weight: bold; }
+    .event-time { color: #555; }
+  </style>
+</head>
+<body>
+  <h1>Upcoming Events</h1>
+  <ul id="events"></ul>
+
+  <!-- Include ical.js library from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/ical.js@1.4.0/build/ical.min.js"></script>
+  <script>
+    const icalUrl = 'https://calendar.google.com/calendar/ical/energeiaverde.m%40gmail.com/private-61e40a016a056494548183f16e3489db/basic.ics';
+
+    async function fetchAndDisplayEvents() {
+      try {
+        const response = await fetch(icalUrl);
+        if (!response.ok) throw new Error('Failed to fetch calendar data');
+        const icsText = await response.text();
+
+        // Parse the iCal data
+        const jcalData = ICAL.parse(icsText);
+        const comp = new ICAL.Component(jcalData);
+        const vevents = comp.getAllSubcomponents('vevent');
+
+        const now = new Date();
+        const eventsList = document.getElementById('events');
+        eventsList.innerHTML = '';
+
+        // Filter and sort upcoming events (next 10)
+        const upcomingEvents = vevents
+          .map(vevent => new ICAL.Event(vevent))
+          .filter(event => event.startDate.toJSDate() >= now)
+          .sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate())
+          .slice(0, 10);
+
+        if (upcomingEvents.length === 0) {
+          eventsList.innerHTML = '<li>No upcoming events found.</li>';
+          return;
+        }
+
+        // Display events
+        upcomingEvents.forEach(event => {
+          const start = event.startDate.toJSDate();
+          const end = event.endDate.toJSDate();
+          const options = { 
+            weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+          };
+          const startStr = start.toLocaleString(undefined, options);
+          const endStr = end.toLocaleString(undefined, options);
+
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <div class="event-title">${event.summary || '(No title)'}</div>
+            <div class="event-time">${startStr} - ${endStr}</div>
+            <div class="event-desc">${event.description || ''}</div>
+          `;
+          eventsList.appendChild(li);
+        });
+
+      } catch (error) {
+        document.getElementById('events').innerHTML = `<li>Error loading events: ${error.message}</li>`;
+      }
+    }
+
+    fetchAndDisplayEvents();
+  </script>
+</body>
+</html>
